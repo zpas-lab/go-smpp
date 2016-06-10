@@ -10,7 +10,7 @@ import (
 	"io"
 	"sync/atomic"
 
-	"github.com/fiorix/go-smpp/smpp/pdu/pdufield"
+	"github.com/zpas-lab/go-smpp/smpp/pdu/pdufield"
 )
 
 var nextSeq uint32

@@ -19,9 +19,9 @@ import (
 
 	"github.com/codegangsta/cli"
 
-	"github.com/fiorix/go-smpp/smpp"
-	"github.com/fiorix/go-smpp/smpp/pdu"
-	"github.com/fiorix/go-smpp/smpp/pdu/pdutext"
+	"github.com/zpas-lab/go-smpp/smpp"
+	"github.com/zpas-lab/go-smpp/smpp/pdu"
+	"github.com/zpas-lab/go-smpp/smpp/pdu/pdutext"
 	"time"
 )
 

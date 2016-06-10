@@ -7,9 +7,9 @@ package smpp
 import (
 	"testing"
 
-	"github.com/fiorix/go-smpp/smpp/pdu"
-	"github.com/fiorix/go-smpp/smpp/pdu/pdufield"
-	"github.com/fiorix/go-smpp/smpp/smpptest"
+	"github.com/zpas-lab/go-smpp/smpp/pdu"
+	"github.com/zpas-lab/go-smpp/smpp/pdu/pdufield"
+	"github.com/zpas-lab/go-smpp/smpp/smpptest"
 )
 
 func TestConn(t *testing.T) {
