@@ -52,7 +52,8 @@ func (pdu *codec) Len() int {
 		l += f.Len()
 	}
 	for _, t := range pdu.t {
-		l += int(t.Len)
+		// +2 bytes for tag, +2 bytes for length (see spec, p.42)
+		l += int(t.Len + 4)
 	}
 	return l
 }
@@ -91,6 +92,17 @@ func (pdu *codec) SerializeTo(w io.Writer) error {
 		return err
 	}
 	_, err = io.Copy(w, &b)
+	if err != nil {
+		return err
+	}
+
+	// after the body is done, we can serialize the optional params.
+	for _, v := range pdu.t {
+		_ = v
+		if err := v.SerializeTo(w); err != nil {
+			return err
+		}
+	}
 	return err
 }
 

@@ -333,6 +333,55 @@ func (t *Transmitter) SubmitLongMsg(sm *ShortMessage) (*ShortMessage, error) {
 	return sm, nil
 }
 
+// Submit sends a short message and returns and updates the given
+// sm with the response status. It returns the same sm object.
+func (t *Transmitter) SubmitLongAsOptional(sm *ShortMessage) (*ShortMessage, error) {
+	p := pdu.NewSubmitSM()
+	f := p.Fields()
+	f.Set(pdufield.SourceAddr, sm.Src)
+	f.Set(pdufield.DestinationAddr, sm.Dst)
+	// we se the ShortMessage as empty, to get the formatting
+	f.Set(pdufield.ShortMessage, "")
+	f.Set(pdufield.RegisteredDelivery, uint8(sm.Register))
+	// Check if the message has validity set.
+	if sm.Validity != time.Duration(0) {
+		f.Set(pdufield.ValidityPeriod, convertValidity(sm.Validity))
+	}
+	f.Set(pdufield.ServiceType, sm.ServiceType)
+	f.Set(pdufield.SourceAddrTON, sm.SourceAddrTON)
+	f.Set(pdufield.SourceAddrNPI, sm.SourceAddrNPI)
+	f.Set(pdufield.DestAddrTON, sm.DestAddrTON)
+	f.Set(pdufield.DestAddrNPI, sm.DestAddrNPI)
+	f.Set(pdufield.ESMClass, sm.ESMClass)
+	f.Set(pdufield.ProtocolID, sm.ProtocolID)
+	f.Set(pdufield.PriorityFlag, sm.PriorityFlag)
+	f.Set(pdufield.ScheduleDeliveryTime, sm.ScheduleDeliveryTime)
+	f.Set(pdufield.ReplaceIfPresentFlag, sm.ReplaceIfPresentFlag)
+	f.Set(pdufield.SMDefaultMsgID, sm.SMDefaultMsgID)
+
+	// set the SMLenght to empty and TLV 0x0424 (message_payload) tag.
+	f.Set(pdufield.SMLength, 0)
+	f.Set(pdufield.DataCoding, uint8(sm.Text.Type()))
+	tlv := p.TLVFields()
+	message_payload_tag := pdufield.TLVType(0x0424)
+	tlv[message_payload_tag] = pdufield.NewTLVBody(message_payload_tag, sm.Text.Encode())
+
+	resp, err := t.do(p)
+	if err != nil {
+		return nil, err
+	}
+	sm.resp.Lock()
+	sm.resp.p = resp.PDU
+	sm.resp.Unlock()
+	if id := resp.PDU.Header().ID; id != pdu.SubmitSMRespID {
+		return sm, fmt.Errorf("unexpected PDU ID: %s", id)
+	}
+	if s := resp.PDU.Header().Status; s != 0 {
+		return sm, s
+	}
+	return sm, resp.Err
+}
+
 // QueryResp contains the parsed the response of a QuerySM request.
 type QueryResp struct {
 	MsgID     string
@@ -348,6 +397,9 @@ func (t *Transmitter) QuerySM(src, msgid string) (*QueryResp, error) {
 	f := p.Fields()
 	f.Set(pdufield.SourceAddr, src)
 	f.Set(pdufield.MessageID, msgid)
+	// NOTE(pawelb): seems like required values for query_sm, but it doesn't work anyway (disabled for security reasons).
+	//	f.Set(pdufield.SourceAddrTON, 5)
+	//	f.Set(pdufield.SourceAddrNPI, 0)
 	resp, err := t.do(p)
 	if err != nil {
 		return nil, err

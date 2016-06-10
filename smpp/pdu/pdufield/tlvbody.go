@@ -21,6 +21,14 @@ type TLVBody struct {
 	data []byte
 }
 
+func NewTLVBody(tag TLVType, data []byte) *TLVBody {
+	return &TLVBody{
+		Tag:  tag,
+		Len:  uint16(len(data)),
+		data: data,
+	}
+}
+
 // Bytes return raw TLV binary data.
 func (tlv *TLVBody) Bytes() []byte {
 	return tlv.data

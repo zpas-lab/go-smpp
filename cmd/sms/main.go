@@ -20,7 +20,9 @@ import (
 	"github.com/codegangsta/cli"
 
 	"github.com/fiorix/go-smpp/smpp"
+	"github.com/fiorix/go-smpp/smpp/pdu"
 	"github.com/fiorix/go-smpp/smpp/pdu/pdutext"
+	"time"
 )
 
 // Version of smppcli.
@@ -143,7 +145,7 @@ var cmdShortMessage = cli.Command{
 			return
 		}
 		log.Println("Connecting...")
-		tx := newTransmitter(c)
+		tx := newTransceiver(c)
 		defer tx.Close()
 		log.Println("Connected to", tx.Addr)
 		sender := c.Args()[0]
@@ -163,6 +165,7 @@ var cmdShortMessage = cli.Command{
 		default:
 			codec = pdutext.Raw(text)
 		}
+		// sm, err := tx.SubmitLongAsOptional(&smpp.ShortMessage{
 		sm, err := tx.Submit(&smpp.ShortMessage{
 			Src:                  sender,
 			Dst:                  recipient,
@@ -184,6 +187,9 @@ var cmdShortMessage = cli.Command{
 			log.Fatalln("Failed:", err)
 		}
 		log.Printf("Message ID: %q", sm.RespID())
+		for {
+			time.Sleep(time.Second)
+		}
 	},
 }
 
@@ -214,6 +220,40 @@ func newTransmitter(c *cli.Context) *smpp.Transmitter {
 		Addr:   c.GlobalString("addr"),
 		User:   os.Getenv("SMPP_USER"),
 		Passwd: os.Getenv("SMPP_PASSWD"),
+	}
+	if s := c.GlobalString("user"); s != "" {
+		tx.User = s
+	}
+	if s := c.GlobalString("passwd"); s != "" {
+		tx.Passwd = s
+	}
+	if c.GlobalBool("tls") {
+		host, _, _ := net.SplitHostPort(tx.Addr)
+		tx.TLS = &tls.Config{
+			ServerName: host,
+		}
+		if c.GlobalBool("precaire") {
+			tx.TLS.InsecureSkipVerify = true
+		}
+	}
+	conn := <-tx.Bind()
+	switch conn.Status() {
+	case smpp.Connected:
+	default:
+		log.Fatalln("Connection failed:", conn.Error())
+	}
+	return tx
+}
+
+func newTransceiver(c *cli.Context) *smpp.Transceiver {
+	tx := &smpp.Transceiver{
+		Addr:   c.GlobalString("addr"),
+		User:   os.Getenv("SMPP_USER"),
+		Passwd: os.Getenv("SMPP_PASSWD"),
+
+		Handler: func(p pdu.Body) {
+			log.Printf("smpptest: echo PDU: %#v", p)
+		},
 	}
 	if s := c.GlobalString("user"); s != "" {
 		tx.User = s
