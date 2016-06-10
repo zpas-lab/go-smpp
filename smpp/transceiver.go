@@ -74,3 +74,11 @@ func (t *Transceiver) bindFunc(c Conn) error {
 	go t.handlePDU(t.Handler)
 	return nil
 }
+
+// DeliverSmResp can be invoked by installed Handler in response to DeliverSm
+func (t *Transceiver) DeliverSmResp(status pdu.Status, seq uint32) error {
+	p := pdu.NewDeliverSMResp()
+	p.Header().Seq = seq
+	p.Header().Status = status
+	return t.conn.Write(p)
+}

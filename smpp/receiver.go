@@ -88,6 +88,14 @@ func (r *Receiver) handlePDU() {
 	}
 }
 
+// DeliverSmResp can be invoked by installed Handler in response to DeliverSm
+func (r *Receiver) DeliverSmResp(status pdu.Status, seq uint32) error {
+	p := pdu.NewDeliverSMResp()
+	p.Header().Seq = seq
+	p.Header().Status = status
+	return r.conn.Write(p)
+}
+
 // Close implements the ClientConn interface.
 func (r *Receiver) Close() error {
 	r.conn.Lock()

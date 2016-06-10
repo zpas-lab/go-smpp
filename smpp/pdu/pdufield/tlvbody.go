@@ -11,9 +11,6 @@ import (
 
 // TODO(fiorix): Implement TLV parameters.
 
-// TLVType is the Tag Length Value.
-type TLVType uint16
-
 // TLVBody represents data of a TLV field.
 type TLVBody struct {
 	Tag  TLVType
