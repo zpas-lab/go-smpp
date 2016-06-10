@@ -6,20 +6,18 @@ package pdufield
 
 import "fmt"
 
-
 type (
-// TLVType is the Tag Length Value.
+	// TLVType is the Tag Length Value.
 	TLVType uint16
 
-// MessageState is sent by SMSC to ESME to indicate the final message state for an SMS DeliveryReport
+	// MessageState is sent by SMSC to ESME to indicate the final message state for an SMS DeliveryReport
 	MessageStateValue byte
 )
 
-
 const (
 	TLVReceiptedMessageId = TLVType(0x001e)
-	TLVMessagePayload = TLVType(0x0424)
-	TLVMessageState = TLVType(0x0427)
+	TLVMessagePayload     = TLVType(0x0424)
+	TLVMessageState       = TLVType(0x0427)
 )
 
 var tlvNames = map[TLVType]string{
@@ -36,16 +34,15 @@ func (t TLVType) String() string {
 	return name
 }
 
-
 const (
-	ENROUTE = MessageStateValue(0x01)
-	DELIVERED = MessageStateValue(0x02)
-	EXPIRED = MessageStateValue(0x03)
-	DELETED = MessageStateValue(0x04)
+	ENROUTE       = MessageStateValue(0x01)
+	DELIVERED     = MessageStateValue(0x02)
+	EXPIRED       = MessageStateValue(0x03)
+	DELETED       = MessageStateValue(0x04)
 	UNDELIVERABLE = MessageStateValue(0x05)
-	ACCEPTED = MessageStateValue(0x06)
-	UNKNOWN = MessageStateValue(0x07)
-	REJECTED = MessageStateValue(0x08)
+	ACCEPTED      = MessageStateValue(0x06)
+	UNKNOWN       = MessageStateValue(0x07)
+	REJECTED      = MessageStateValue(0x08)
 )
 
 var messageStateNames = map[MessageStateValue]string{

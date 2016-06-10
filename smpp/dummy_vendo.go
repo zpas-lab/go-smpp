@@ -7,4 +7,3 @@ import (
 )
 
 var _ = cli.NewApp
-
