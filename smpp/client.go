@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fiorix/go-smpp/smpp/pdu"
-	"github.com/fiorix/go-smpp/smpp/pdu/pdufield"
+	"github.com/zpas-lab/go-smpp/smpp/pdu"
+	"github.com/zpas-lab/go-smpp/smpp/pdu/pdufield"
 )
 
 // ConnStatus is an abstract interface for a connection status change.
@@ -77,14 +77,14 @@ type client struct {
 	WindowSize  uint
 
 	// internal stuff.
-	inbox chan pdu.Body
-	conn  *connSwitch
-	stop  chan struct{}
-	once  sync.Once
+	inbox      chan pdu.Body
+	inboxMutex sync.Mutex
+	conn       *connSwitch
+	stop       chan struct{}
+	once       sync.Once
 }
 
 func (c *client) init() {
-	c.inbox = make(chan pdu.Body)
 	c.conn = &connSwitch{}
 	c.stop = make(chan struct{})
 	if c.EnquireLink < 10*time.Second {
@@ -99,6 +99,9 @@ func (c *client) Bind() {
 	const maxdelay = 120.0
 	for !c.closed() {
 		eli := make(chan struct{})
+		c.inboxMutex.Lock()
+		c.inbox = make(chan pdu.Body)
+		c.inboxMutex.Unlock()
 		conn, err := Dial(c.Addr, c.TLS)
 		if err != nil {
 			c.notify(&connStatus{
@@ -135,6 +138,13 @@ func (c *client) Bind() {
 		}
 	retry:
 		close(eli)
+		// NOTE(michalm,#415): this channel is closed to avoid goroutines ( c.bindFunc() -> ... -> c.Read() )
+		// block on c.inbox when connection is broken before sending anything to c.inbox (c.inbox <- p).
+		// However, closing the channel does not resolve the issue completely. Theoretically, it is possible
+		// that this loop (l.100) iterates a couple of times before c.inbox is read in c.Read().
+		// In such a case we still end up with some goroutines hanging. But now they have a chance to return
+		// once the connection fails and c.inbox is closed.
+		close(c.inbox)
 		c.conn.Close()
 		delay = math.Min(delay*math.E, maxdelay)
 		c.trysleep(time.Duration(delay) * time.Second)
@@ -167,8 +177,14 @@ func (c *client) notify(ev ConnStatus) {
 
 // Read reads PDU binary data off the wire and returns it.
 func (c *client) Read() (pdu.Body, error) {
+	c.inboxMutex.Lock()
+	in := c.inbox
+	c.inboxMutex.Unlock()
 	select {
-	case pdu := <-c.inbox:
+	case pdu, ok := <-in:
+		if !ok {
+			return nil, io.ErrUnexpectedEOF
+		}
 		return pdu, nil
 	case <-c.stop:
 		return nil, io.EOF
